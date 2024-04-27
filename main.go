@@ -33,7 +33,7 @@ func main() {
 		RedirectURL:  "http://localhost:8080/auth/callback/google",
 		Scopes: []string{
 			"https://www.googleapis.com/auth/userinfo.email",
-			"https://www.googleapis.com/auth/useringo.profile",
+			"https://www.googleapis.com/auth/userinfo.profile",
 		},
 		Endpoint: google.Endpoint,
 	}
@@ -41,7 +41,7 @@ func main() {
 	addr := flag.String("addr", ":8080", "the port of the app")
 	flag.Parse()
 	r := newRoom()
-	http.Handle("/", AuthMiddlware(&templateHandler{filename: "chat.html"}))
+	http.Handle("/", &templateHandler{filename: "chat.html"})
 	http.Handle("/login", &templateHandler{filename: "login.html"})
 	http.Handle("/room", r)
 	http.Handle("/auth/", &authUser{conf: conf})

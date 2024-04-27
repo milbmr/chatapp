@@ -24,7 +24,7 @@ type authUser struct {
 }
 
 func (a *authUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	seg := strings.Split(r.URL.RawPath, "/")
+	seg := strings.Split(r.URL.Path, "/")
 	action := seg[2]
 	provider := seg[3]
 	switch action {
@@ -35,11 +35,16 @@ func (a *authUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		state := generateAuthState(w)
+		fmt.Println(state)
 		url := a.conf.AuthCodeURL(state)
 		w.Header().Set("location", url)
 		w.WriteHeader(http.StatusTemporaryRedirect)
 	case "callback":
-		stateCookie, _ := r.Cookie(oauthState)
+		stateCookie, err := r.Cookie(oauthState)
+		if err != nil {
+			log.Printf("error reading cookie %s", err.Error())
+			return
+		}
 		if r.FormValue("state") != stateCookie.Value {
 			log.Println("invalid google auth state")
 			w.Header().Set("location", "/login")
@@ -61,14 +66,14 @@ func (a *authUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-    data, err := io.ReadAll(response.Body)
-    if err != nil {
-      log.Printf("error parsing response %s", err.Error())
+		data, err := io.ReadAll(response.Body)
+		if err != nil {
+			log.Printf("error parsing response %s", err.Error())
 			w.Header().Set("location", "/login")
 			w.WriteHeader(http.StatusTemporaryRedirect)
 			return
-    }
-    fmt.Println(data)
+		}
+		fmt.Println(string(data))
 	default:
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "auth action not supported %s", action)
@@ -80,6 +85,6 @@ func generateAuthState(w http.ResponseWriter) string {
 	b := make([]byte, 16)
 	rand.Read(b)
 	state := base64.URLEncoding.EncodeToString(b)
-	http.SetCookie(w, &http.Cookie{Name: oauthState, Value: state, Expires: expiration})
+	http.SetCookie(w, &http.Cookie{Name: oauthState, Value: state, Path: "/", Expires: expiration})
 	return state
 }
