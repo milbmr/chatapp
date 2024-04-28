@@ -19,6 +19,11 @@ const (
 	oauthGoogleURL = "https://www.googleapis.com/oauth2/v2/userinfo?access_token="
 )
 
+type user struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
 type authUser struct {
 	conf *oauth2.Config
 }
@@ -73,7 +78,16 @@ func (a *authUser) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusTemporaryRedirect)
 			return
 		}
-		fmt.Println(string(data))
+
+		encodedCookie := encodeToBase64(data)
+		cookie := http.Cookie{
+			Name:  "userdata",
+			Value: encodedCookie,
+			Path:  "/",
+		}
+		http.SetCookie(w, &cookie)
+		w.Header().Set("location", "/")
+		w.WriteHeader(http.StatusTemporaryRedirect)
 	default:
 		w.WriteHeader(http.StatusNotFound)
 		fmt.Fprintf(w, "auth action not supported %s", action)

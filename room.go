@@ -9,7 +9,7 @@ import (
 )
 
 type room struct {
-	forward chan []byte
+	forward chan *message
 	join    chan *client
 	leave   chan *client
 	clients map[*client]bool
@@ -18,11 +18,11 @@ type room struct {
 
 func newRoom() *room {
 	return &room{
-		forward: make(chan []byte),
+		forward: make(chan *message, messageBufferSize),
 		join:    make(chan *client),
 		leave:   make(chan *client),
 		clients: make(map[*client]bool),
-    t: trace.Off(),
+		t:       trace.Off(),
 	}
 }
 
@@ -60,10 +60,18 @@ func (r *room) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	var user user
+	cookie, err := req.Cookie("userdata")
+	if err != nil {
+		log.Printf("error getting cookie %s", err.Error())
+	}
+	decodeFromString(cookie.Value, &user)
+
 	client := &client{
-		socket: socket,
-		send:   make(chan []byte),
-		room:   r,
+		socket:   socket,
+		send:     make(chan *message, messageBufferSize),
+		room:     r,
+		userData: user,
 	}
 
 	r.join <- client

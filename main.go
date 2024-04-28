@@ -23,7 +23,17 @@ func (t *templateHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		t.template = template.Must(template.ParseFiles(filepath.Join("templates", t.filename)))
 	})
 
-	t.template.Execute(w, r)
+	data := map[string]interface{}{
+		"Host": r.Host,
+	}
+
+	if cookie, err := r.Cookie("userdata"); err == nil {
+		var user user
+		decodeFromString(cookie.Value, &user)
+		data["userData"] = user
+	}
+
+	t.template.Execute(w, data)
 }
 
 func main() {
@@ -41,7 +51,7 @@ func main() {
 	addr := flag.String("addr", ":8080", "the port of the app")
 	flag.Parse()
 	r := newRoom()
-	http.Handle("/", &templateHandler{filename: "chat.html"})
+	http.Handle("/", AuthMiddlware(&templateHandler{filename: "chat.html"}))
 	http.Handle("/login", &templateHandler{filename: "login.html"})
 	http.Handle("/room", r)
 	http.Handle("/auth/", &authUser{conf: conf})
